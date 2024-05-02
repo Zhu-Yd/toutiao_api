@@ -183,7 +183,7 @@ exports.addComments = (req, res) => {
                 data.target = req.body.target
                 data.art_id = req.body.target
                 res.send({
-                    status: 0, message: '回复评论成功', data: data
+                    status: 0, message: '添加文章评论成功', data: data
                 })
             } else {
                 res.cc('添加文章评论失败')
@@ -218,16 +218,18 @@ exports.getComments = (req, res) => {
         }
         db.query(sql, [req.query.source], (err, result) => {
             if (err) {
-                res.cc(err)
+                return res.cc(err)
             }
             if (result.length >= 1) {
-                data.end_id = result[0].id
+                data.end_id = result[0].id //结束id为第一条数据的id值
                 if (!req.query.offset) {
+                    //如果没有offset,默认为最新id,并且为第一页
                     req.query.offset = result[result.length - 1].id
                     isFirstPage = true
                 }
                 data.totle_count = result.length
             } else {
+                //如果没有数据
                 data.end_id = null
                 data.totle_count = 0
             }
@@ -263,7 +265,7 @@ exports.getComments = (req, res) => {
                        from tt_comment c
                                 inner join tt_user u on c.user_id = u.id
                        where c.article_id = ?
-                         and c.id <= ?
+                         and c.id <= ? and c.comment_id = 0
                        order by c.id desc limit ?
                 `
             } else {
@@ -320,12 +322,64 @@ exports.getComments = (req, res) => {
                 })
 
             })
+        }else{
+            return res.send({
+                status:0,
+                message:'评论信息列表为空',
+                data:data
+            })
         }
 
 
     })
 }
 
+exports.getComment = (req, res) => {
+    data = {}
+    sql = `select c.id                                                      as com_id,
+                  c.user_id                                                 as aut_id,
+                  u.name                                                    as aut_name,
+                  u.photo                                                   as aut_photo,
+                  (select count(1) from tt_comment where comment_id = c.id) as reply_count,
+                  c.pubdat,
+                  c.content
+           from tt_comment c
+                    left join tt_user u
+                              on c.user_id = u.id
+           where c.id = ?`
+    db.query(sql,[req.query.target],(err,result)=>{
+        if(err){
+            return res.cc(err)
+        }
+        if(result.length>0){
+            data=result[0]
+            res.send({
+                status:0,
+                message:'获取指定评论成功',
+                data: data
+                }
+            )
+        }else{
+            return res.cc('没有找到相关记录')
+        }
+    })
+}
+
+exports.getCommentsCount = (req, res) => {
+    data = {}
+    sql = 'select count(1) as c_count from tt_comment where article_id=?'
+    db.query(sql, [req.query.target], (err, result) => {
+        if (err) {
+            return res.cc(err)
+        }
+        data.count = result[0].c_count
+        res.send({
+            status: 0,
+            message: '获取评论数量成功',
+            data: data
+        })
+    })
+}
 exports.getArticles = (req, res) => {
     console.log('获取文章列表')
     data = {
@@ -402,11 +456,29 @@ exports.getArticles = (req, res) => {
     })
 }
 
-exports.getChannelArticles = (req, res) => {
+exports.getChannelArticles = async (req, res) => {
     console.log('获取频道文章列表')
     data = {
         page: req.query.page ? parseInt(req.query.page) : 1,
         per_page: req.query.per_page ? parseInt(req.query.per_page) : 2
+    }
+    //如果没有now_id,则查询最新的文章id并赋值,如果没有文章,则为0
+    if (req.query.now_id === undefined) {
+        await new Promise((resolve, reject) => {
+            sql = 'select a.id from tt_article a order by id desc'
+            db.query(sql, [], (err, result) => {
+                if (err) {
+                    res.cc(err)
+                    reject(err)
+                }
+                if (result.length > 0) {
+                    req.query.now_id = result[0].id
+                } else {
+                    req.query.now_id = 0
+                }
+                resolve()
+            })
+        })
     }
     const sql_exe1 = new Promise((resolve) => {
         sql = `select a.id                                                      as art_id,
@@ -420,9 +492,11 @@ exports.getChannelArticles = (req, res) => {
                       cover_3
                from tt_article a
                         join tt_user u on a.auth_id = u.id
-               where a.channel_id = ? limit ${data.per_page * (data.page - 1)}
-                   , ${data.per_page}`
-        db.query(sql, [req.query.channel], (err, result) => {
+               where a.channel_id = ?
+                 and a.id <= ?
+               order by a.id desc limit ${data.per_page * (data.page - 1)}
+                      , ${data.per_page}`
+        db.query(sql, [req.query.channel, req.query.now_id], (err, result) => {
             if (err) {
                 res.cc(err)
             }
@@ -430,7 +504,7 @@ exports.getChannelArticles = (req, res) => {
             resolve()
         })
     })
-    sql_exe1.then(() => {
+    sql_exe1.then(async () => {
         data.results.forEach((item, index) => {
             let cover = {images: []}
             if (!item.cover_1) {
@@ -452,15 +526,24 @@ exports.getChannelArticles = (req, res) => {
             item.cover = cover
 
         })
-        sql = 'select count(1) as total_count from tt_article a where a.channel_id=?'
-        db.query(sql, [req.query.channel], (err, result) => {
-            if (err) {
-                return res.cc(err)
-            }
-            data.totle_count = result[0].total_count
-            return res.send({
-                status: 0, message: '获取频道文章列表成功', data: data
+        await new Promise(resolve => {
+            sql = 'select count(1) as total_count from tt_article a where a.channel_id=?'
+            db.query(sql, [req.query.channel], (err, result) => {
+                if (err) {
+                    return res.cc(err)
+                }
+                data.total_count = result[0].total_count
+                //如果查询结果>1,则将最后一个文章的id赋值为now_id;如果无查询结果,now_id=0
+                if (data.results.length >= 1) {
+                    data.now_id = data.results[data.results.length - 1].art_id - 1
+                } else {
+                    data.now_id = 0
+                }
+                resolve()
             })
+        })
+        return res.send({
+            status: 0, message: '获取频道文章列表成功', data: data
         })
 
     })
@@ -490,7 +573,10 @@ exports.getArticleDetail = (req, res) => {
            where a.id = ?`
     db.query(sql, [req.user.id, req.user.id, req.user.id, req.params.article_id], (err, result) => {
         if (err) {
-            res.cc(err)
+            return res.cc(err)
+        }
+        if (result.length === 0) {
+            return res.cc('资源不存在', 404)
         }
         data.results = result
         data.results.forEach((item, index) => {
@@ -514,6 +600,24 @@ exports.getArticleDetail = (req, res) => {
         res.send({
             status: 0,
             message: '获取文章详细信息成功',
+            data: data
+        })
+    })
+}
+
+exports.searchArticles = (req, res) => {
+    console.log('搜索文章')
+    const data = {}
+    sql = "select id,title from tt_article where title like ? order by id desc "
+    db.query(sql, [`%${req.query.keys}%`], (err, result) => {
+        if (err) {
+            res.cc(err)
+        }
+        // console.log(result)
+        data.result = result
+        res.send({
+            status: 0,
+            message: '获取搜索列表成功',
             data: data
         })
     })

@@ -5,7 +5,7 @@ const path = require("path")
 //获取用户信息
 exports.profile = (req, res) => {
     const userInfo = req.user
-    sql = 'select * from tt_user as u join tt_user_info as ui on u.id=ui.user_id where u.id=?'
+    sql = 'select * from tt_user as u left join tt_user_info as ui on u.id=ui.user_id where u.id=?'
     db.query(sql, userInfo.id, (err, result) => {
         if (err) {
             return res.cc(err)
@@ -76,18 +76,22 @@ exports.userInfo = (req, res) => {
 
 //更新用户信息
 exports.update = (req, res) => {
+    const baseUrl= 'http://192.168.1.2:3007'
     let user_info = {...req.body}
-    if (req.files.id_card_front) {
-        user_info.id_card_front = path.join('/uploads', req.files.id_card_front[0].filename + '.jpg')
+    if (req.files && req.files.id_card_front) {
+        user_info.id_card_front = baseUrl+path.join('/uploads', req.files.id_card_front[0].filename)
     }
-    if (req.files.id_card_back) {
-        user_info.id_card_back = path.join('/uploads', req.files.id_card_back[0].filename + '.jpg')
+    if (req.files && req.files.id_card_back) {
+        user_info.id_card_back = baseUrl+path.join('/uploads', req.files.id_card_back[0].filename)
     }
-    if (req.files.id_card_handheld) {
-        user_info.id_card_handheld = path.join('/uploads', req.files.id_card_handheld[0].filename + '.jpg')
+    if (req.files && req.files.id_card_handheld) {
+        user_info.id_card_handheld = baseUrl+path.join('/uploads', req.files.id_card_handheld[0].filename)
+    }
+    if (req.files && req.files.photo) {
+        user_info.photo = baseUrl+path.join('/uploads', req.files.photo[0].filename)
     }
     console.log(user_info)
-    sql = 'update tt_user u join tt_user_info ui on u.id=ui.user_id set ? where u.id=?'
+    sql = 'update tt_user u left join tt_user_info ui on u.id=ui.user_id set ? where u.id=?'
     db.query(sql, [user_info, req.user.id], (err, result) => {
         if (err) {
             return res.cc(err)

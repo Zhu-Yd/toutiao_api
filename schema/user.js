@@ -1,6 +1,6 @@
 const joi = require("joi")
 const user_id = joi.number()
-const name = joi.string().pattern(/^\w{6,15}$/)
+const name = joi.string().pattern(/^[\u4e00-\u9fa5a-zA-Z]{1,7}$/)
 const mobile = joi.string().pattern(/^1[358]\d{9}$/)
 const gender = joi.string().pattern(/^0|1|2$/)
 const birthday = joi.string().pattern(/^\d{4}-\d{1,2}-\d{1,2}$/)

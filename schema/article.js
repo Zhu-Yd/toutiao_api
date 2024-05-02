@@ -3,7 +3,7 @@ const article = joi.number().required()
 const user = joi.number().required()
 const channel=joi.number().required()
 const type = joi.string().pattern(/^\d{1}$/).required()
-const like_type = joi.number().required().min(1).max(1)
+const like_type = joi.number().required().min(0).max(1)
 const per_page = joi.number()
 const page = joi.number()
 const content = joi.string().required()
@@ -12,6 +12,7 @@ const comment_type = joi.string().pattern(/^a|c$/).required()
 const source = joi.number().required()
 const offset = joi.number()
 const limit = joi.number()
+const now_id=joi.number()
 let reg_collections_schema = {
     body: {
         target: article,
@@ -47,6 +48,12 @@ let reg_getComments_schema = {
     }
 }
 
+let reg_getCommentsCount_schema = {
+    query: {
+        target: article
+    }
+}
+
 let reg_getArticles_schema = {
     query: {
         page, per_page
@@ -57,7 +64,7 @@ let reg_getArticles_schema = {
 }
 let reg_getChannelArticles_schema = {
     query: {
-        page, per_page,channel
+        page, per_page,channel,now_id
     }
 }
 
@@ -72,6 +79,7 @@ module.exports = {
     reg_likings_schema,
     reg_comments_schema,
     reg_getComments_schema,
+    reg_getCommentsCount_schema,
     reg_getArticles_schema,
     reg_getChannelArticles_schema,
     reg_getArticleDetail_schema

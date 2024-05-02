@@ -2,7 +2,7 @@ const db = require("../db/index")
 const jwt = require("jsonwebtoken")
 const config = require("../config")
 
-exports.login = async (req, res) => {
+exports.login = (req, res) => {
     const userInfo = req.body
     let userinfo = {}
     db.getConnection(async (error, connection) => {
@@ -37,7 +37,8 @@ exports.login = async (req, res) => {
                 return res.send({
                     status: 0,
                     message: "登录成功",
-                    token: 'Bearer ' + tokenStr
+                    // token: 'Bearer ' + tokenStr
+                    token:tokenStr
                 })
             })
         })
@@ -71,7 +72,7 @@ exports.login = async (req, res) => {
                             return res.send({
                                 status: 0,
                                 message: "登录成功",
-                                token: 'Bearer ' + tokenStr
+                                token: tokenStr
                             })
                         } else {
                             connection.rollback()

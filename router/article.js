@@ -10,6 +10,7 @@ const {
     reg_likings_schema,
     reg_comments_schema,
     reg_getComments_schema,
+    reg_getCommentsCount_schema,
     reg_getArticles_schema,
     reg_getChannelArticles_schema,
     reg_getArticleDetail_schema
@@ -30,13 +31,23 @@ router.post("/comments", expressJoi(reg_comments_schema), Handler.addComments)
 //获取评论
 router.get("/comments",expressJoi(reg_getComments_schema),Handler.getComments)
 
+//获取指定评论
+router.get("/Comment",expressJoi(reg_getCommentsCount_schema),Handler.getComment)
+
+//获取评论数量
+router.get("/comments_count",expressJoi(reg_getCommentsCount_schema),Handler.getCommentsCount)
+
 //获取用户文章列表
 router.get("/:user_id/articles",expressJoi(reg_getArticles_schema),Handler.getArticles)
 
 //获取频道文章列表
 router.get("/articles",expressJoi(reg_getChannelArticles_schema),Handler.getChannelArticles)
 
+//搜索文章
+router.get("/search",Handler.searchArticles)
+
 //获取文章详情
 router.get("/:article_id",expressJoi(reg_getArticleDetail_schema),Handler.getArticleDetail)
+
 
 module.exports = router
