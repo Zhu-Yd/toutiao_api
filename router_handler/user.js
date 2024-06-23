@@ -238,41 +238,34 @@ exports.followers = (req, res) => {
                 resolve()
             })
         })
-        exe_sql2.then(() => {
-            data.results.forEach((item, index) => {
+        exe_sql2.then(async () => {
+            const promises = data.results.map((item, index) => {
 
-                let exe_sql3 = new Promise(resolve => {
+                return new Promise(resolve => {
                     sql3 = 'select count(1) as res from tt_user2user where to_user_id=?'
                     db.query(sql3, item.id, (err, result) => {
                         if (err) {
                             return res.cc(err)
                         }
                         item.fans_count = result[0].res
-                        resolve()
-                    })
-                })
-                exe_sql3.then(() => {
-                    sql4 = 'select 1 from tt_user2user where from_user_id=? and to_user_id=?'
 
-                    db.query(sql4, [req.user.id, item.id], (err, result) => {
-                        if (err) {
-                            return res.cc(err)
-                        }
-                        if (result.length == 1) {
+                        sql4 = 'select 1 from tt_user2user where from_user_id=? and to_user_id=?'
 
-                            item.mutual_follow = true
-                        } else {
-                            item.mutual_follow = false
-                        }
-                        if (index == data.results.length - 1) {
-                            return res.send({
-                                status: 0, message: '获取用户粉丝列表成功', data: data
-                            })
-                        }
+                        db.query(sql4, [req.user.id, item.id], (err, result) => {
+                            if (err) {
+                                return res.cc(err)
+                            }
+                            item.mutual_follow = (result.length == 1)
+                            resolve()
+                        })
                     })
 
                 })
 
+            })
+            await Promise.all(promises)
+            return res.send({
+                status: 0, message: '获取用户粉丝列表成功', data: data
             })
         })
     })
