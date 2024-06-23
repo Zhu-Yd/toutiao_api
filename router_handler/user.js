@@ -76,19 +76,19 @@ exports.userInfo = (req, res) => {
 
 //更新用户信息
 exports.update = (req, res) => {
-    const baseUrl= 'http://192.168.1.2:3007'
+    const baseUrl = 'http://192.168.1.2:3007'
     let user_info = {...req.body}
     if (req.files && req.files.id_card_front) {
-        user_info.id_card_front = baseUrl+path.join('/uploads', req.files.id_card_front[0].filename)
+        user_info.id_card_front = baseUrl + path.join('/uploads', req.files.id_card_front[0].filename)
     }
     if (req.files && req.files.id_card_back) {
-        user_info.id_card_back = baseUrl+path.join('/uploads', req.files.id_card_back[0].filename)
+        user_info.id_card_back = baseUrl + path.join('/uploads', req.files.id_card_back[0].filename)
     }
     if (req.files && req.files.id_card_handheld) {
-        user_info.id_card_handheld = baseUrl+path.join('/uploads', req.files.id_card_handheld[0].filename)
+        user_info.id_card_handheld = baseUrl + path.join('/uploads', req.files.id_card_handheld[0].filename)
     }
     if (req.files && req.files.photo) {
-        user_info.photo = baseUrl+path.join('/uploads', req.files.photo[0].filename)
+        user_info.photo = baseUrl + path.join('/uploads', req.files.photo[0].filename)
     }
     console.log(user_info)
     sql = 'update tt_user u left join tt_user_info ui on u.id=ui.user_id set ? where u.id=?'
@@ -173,39 +173,34 @@ exports.tofollowings = (req, res) => {
 
 
         })
-        sql_exe2.then(() => {
-            data.results.forEach((item, index) => {
-                let sql_exe3 = new Promise(resolve => {
-                    sql3 = 'select 1 from tt_user2user where from_user_id=? and to_user_id=?'
+        sql_exe2.then(async () => {
+            // let ite = 0
+            const promises = data.results.map((item, index) => {
+                return new Promise(resolve => {
+                    const sql3 = 'select 1 from tt_user2user where from_user_id=? and to_user_id=?';
                     db.query(sql3, [item.id, req.user.id], (err, result) => {
                         if (err) {
-                            res.cc(err)
+                            return res.cc(err);
                         }
-                        if (result.length === 1) {
-                            item.mutual_follow = true
-                        } else {
-                            item.mutual_follow = false
-                        }
-                        resolve()
-                    })
-                })
-                sql_exe3.then(() => {
-                    sql4 = "select count(from_user_id) as res from tt_user2user where to_user_id=?"
-                    db.query(sql4, data.results[index].id, (err, result) => {
-                        if (err) {
-                            return res.cc(err)
-                        }
-                        data.results[index].fans_count = result[0].res
-                        if (index == data.results.length - 1) {
-                            return res.send({
-                                stasus: 0, message: '获取关注用户列表成功', data: data
-                            })
-                        }
-                    })
+                        item.mutual_follow = (result.length === 1);
 
-                })
+                        const sql4 = "select count(from_user_id) as res from tt_user2user where to_user_id=?";
+                        db.query(sql4, [item.id], (err, result) => {
+                            if (err) {
+                                return res.cc(err);
+                            }
+                            item.fans_count = result[0].res;
+                            resolve();
+                        });
+                    });
+                });
 
             })
+            await Promise.all(promises);
+            return res.send({
+                stasus: 0, message: '获取关注用户列表成功', data: data
+            })
+
         })
     })
 
@@ -320,7 +315,7 @@ exports.delHistory = async (req, res) => {
             message: '清空用户搜索历史记录成功'
         })
     }
-    await redis.ioReids.zrem(PREFIX + req.user.id,keys_in)
+    await redis.ioReids.zrem(PREFIX + req.user.id, keys_in)
     return res.send({
         status: 0,
         message: '删除用户指定搜索历史记录成功'
