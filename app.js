@@ -33,21 +33,31 @@ function jwtMiddleware(req, res, next) {
     // 获取请求路径并存储在 req.path 中
     const requestPath = req.path;
 
+    let flag = true // 白名单控制标志
     // 正则表达式数组 排除路径 如果请求路径存在于白名单中，直接放行并返回
     const regexArray = [/^\/app\//, /^\/uploads\//, /^\/channel\//, /^\/article\/articles/];
     // 使用 some() 方法检查字符串是否与数组中的任何一个正则表达式匹配
     const isMatched = regexArray.some(regex => regex.test(requestPath));
     if (isMatched) {
-        return next();
+        if (!token) {
+            return next()
+        } else {
+            flag = false // 如果有token,白名单控制标志设为false,尝试解码
+        }
+
     }
 
     if (token) {
         // 执行 JWT 解析并将解析后的用户信息存储在 req.user 中
         jwt.verify(token, config.jwtSecretKey, (err, decoded) => {
-            if (err) {
+            if (err && flag) {
+                //如果解码出错 and 白名单标志为true（表示该路由不属于白名单但是token错误）返回错误
                 return res.status(401).json({message: 'Token is not valid'});
             } else {
-                req.user = decoded;
+                //如果能正确解码,设置user;如果不能,什么都不做
+                if (!err) {
+                    req.user = decoded;
+                }
                 next();
             }
         });
