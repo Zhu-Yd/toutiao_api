@@ -32,9 +32,9 @@ router.post("/comments", expressJoi(reg_comments_schema), Handler.addComments)
 router.get("/comments",expressJoi(reg_getComments_schema),Handler.getComments)
 
 //获取指定评论
-router.get("/Comment",expressJoi(reg_getCommentsCount_schema),Handler.getComment)
+router.get("/comment",expressJoi(reg_getCommentsCount_schema),Handler.getComment)
 
-//获取评论数量
+//获取文章评论数量
 router.get("/comments_count",expressJoi(reg_getCommentsCount_schema),Handler.getCommentsCount)
 
 //获取用户文章列表

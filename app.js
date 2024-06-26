@@ -3,7 +3,10 @@ const app = express()
 const joi = require("joi")
 //解决跨域问题
 const cors = require('cors')
-app.use(cors())
+app.use(cors({
+    origin: 'https://192.168.1.2:8080', // 允许的域
+    credentials: true, // 允许凭据
+}))
 const config = require("./config")
 //jwt身份认证模块
 const expressJWT = require("express-jwt")

@@ -169,7 +169,7 @@ exports.addComments = (req, res) => {
                     status: 0, message: '回复评论成功', data: data
                 })
             } else {
-                res.cc('添加评论失败')
+                res.cc('回复评论失败')
             }
         })
     } else {
@@ -463,7 +463,7 @@ exports.getChannelArticles = async (req, res) => {
         per_page: req.query.per_page ? parseInt(req.query.per_page) : 2
     }
     //如果没有now_id,则查询最新的文章id并赋值,如果没有文章,则为0
-    if (req.query.now_id === undefined) {
+    if (req.query.now_id === undefined) { //undefined巧妙的避免了第一条数据的判断
         await new Promise((resolve, reject) => {
             sql = 'select a.id from tt_article a order by id desc'
             db.query(sql, [], (err, result) => {
@@ -533,7 +533,7 @@ exports.getChannelArticles = async (req, res) => {
                     return res.cc(err)
                 }
                 data.total_count = result[0].total_count
-                //如果查询结果>1,则将最后一个文章的id赋值为now_id;如果无查询结果,now_id=0
+                //如果查询结果>1,则将最后一个文章的id-1赋值给now_id;如果无查询结果,now_id=0
                 if (data.results.length >= 1) {
                     data.now_id = data.results[data.results.length - 1].art_id - 1
                 } else {
